@@ -15,7 +15,11 @@ class Server(ABC):
         pass
 
     @abstractmethod
-    def get_vacancies(self):
+    def get_vacancies(self, keyword: str):
+        pass
+
+    @abstractmethod
+    def show_vacancies(self):
         pass
 
 
@@ -24,7 +28,7 @@ class HeadHunter(Server):
 
     url = "https://api.hh.ru/vacancies/"
 
-    def __init__(self, keyword: str):
+    def __init__(self):
         """Конструктор класса"""
 
         self.params = {
@@ -35,7 +39,7 @@ class HeadHunter(Server):
             "items": [{}]
         }
         self.vacancies = []
-        self.keyword = keyword
+        self.keyword = None
         self.headers = {
             "User-Agent: MyApp/1.0 (alexa.sazhaeva@gmail.com)"
         }
@@ -48,16 +52,14 @@ class HeadHunter(Server):
             raise ParsingError(f"Ошибка получения вакансий. Статус: {response.status_code}")
         return response.json()["items"]
 
-    def get_vacancies(self, page_count=10):
+    def get_vacancies(self, keyword: str, page_count=10):
         """Метод осуществляет выборку вакансий"""
 
         # Символы, которые необходимо удалить из назвения вакансии
         symbols = ".,()\'\":!;?-"
         self.vacancies = []
         self.params["pages"] = page_count
-
-        # Очищаем json файл
-        self.json_saver.clear_file()
+        self.keyword = keyword
 
         # Начинаем перебор вакансий по страницам
         for page in range(page_count):
@@ -106,19 +108,23 @@ class HeadHunter(Server):
                 break
         print(f"Всего найдено вакансий: {len(self.vacancies)}")
 
+    def show_vacancies(self):
+        """Выводит на экран отобранные вакансии"""
+        self.json_saver.show_file()
+
 
 class SuperJob(Server):
     """Класс для работы с платформой SuperJob"""
 
     url = "https://api.superjob.ru/2.0/vacancies/"
 
-    def __init__(self, keyword: str):
+    def __init__(self):
         """Конструктор класса"""
 
         self.params = {
             "count": 10,
             "page": None,
-            "keyword": keyword,
+            "keyword": None,
             "archive": False
         }
         self.vacancies = []
@@ -134,13 +140,11 @@ class SuperJob(Server):
             raise ParsingError(f"Ошибка получения вакансий. Статус: {response.status_code}")
         return response.json()["objects"]
 
-    def get_vacancies(self, page_count=5):
+    def get_vacancies(self, keyword: str, page_count=5):
         """Метод осуществляет выборку вакансий"""
 
         self.vacancies = []
-
-        # Очищаем json файл
-        self.json_saver.clear_file()
+        self.params["keyword"] = keyword
 
         for page in range(page_count):
             page_vacancies = []
@@ -164,3 +168,7 @@ class SuperJob(Server):
                 print(f"Всего найдено вакансий: {len(self.vacancies)}")
                 break
         print(f"Всего найдено вакансий: {len(self.vacancies)}")
+
+    def show_vacancies(self):
+        """Выводит на экран отобранные вакансии"""
+        self.json_saver.show_file()
