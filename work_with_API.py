@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from exceptions import ParsingError
 import requests
 
+
 class Server(ABC):
     """Абстрактный класс для работы с API сайтов с вакансиями"""
 
@@ -100,7 +101,7 @@ class SuperJob(Server):
         """Конструктор класса"""
 
         self.params = {
-            "count": 100,
+            "count": 10,
             "page": None,
             "keyword": keyword,
             "archive": False
@@ -133,13 +134,8 @@ class SuperJob(Server):
             else:
                 self.vacancies.extend(page_vacancies)
                 for vacancy in page_vacancies:
-                    print(f"Добавлена вакансия: {vacancy['name']}")
+                    print(f"Добавлена вакансия: {vacancy['profession']}")
             if len(page_vacancies) == 0:
                 print(f"Всего найдено вакансий: {len(self.vacancies)}")
                 break
         print(f"Всего найдено вакансий: {len(self.vacancies)}")
-
-
-sj_api = SuperJob("python")
-sj_api.get_vacancies()
-print(sj_api.vacancies)
