@@ -139,3 +139,16 @@ class SuperJob(Server):
                 print(f"Всего найдено вакансий: {len(self.vacancies)}")
                 break
         print(f"Всего найдено вакансий: {len(self.vacancies)}")
+
+
+class Vacancy:
+    """Класс для работы с вакансиями"""
+
+    def __int__(self, name: str, link: str, salary: int, description: str, area: str):
+        """Конструктор класса"""
+
+        self.name = name
+        self.link = link
+        self.salary = salary
+        self.description = description
+        self.area = area
