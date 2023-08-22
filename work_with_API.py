@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
 from exceptions import ParsingError
-from utils import exchange
+from work_with_vacancies import Vacancy
+from work_with_json import JSONSaver
 import requests
 
 
 class Server(ABC):
     """Абстрактный класс для работы с API сайтов с вакансиями"""
+
+    json_saver = JSONSaver()
 
     @abstractmethod
     def get_request(self):
@@ -52,6 +55,11 @@ class HeadHunter(Server):
         symbols = ".,()\'\":!;?-"
         self.vacancies = []
         self.params["pages"] = page_count
+
+        # Очищаем json файл
+        self.json_saver.clear_file()
+
+        # Начинаем перебор вакансий по страницам
         for page in range(page_count):
             page_vacancies = []
             temp_vacancies = []
@@ -62,7 +70,7 @@ class HeadHunter(Server):
                 for vacancy in temp_vacancies:
 
                     # Проверяем, что вакансия не в архиве
-                    if vacancy["archived"] == False:
+                    if not vacancy["archived"]:
 
                         # Удаляем ненужные символы из названия вакансии
                         name = vacancy["name"].lower()
@@ -80,11 +88,12 @@ class HeadHunter(Server):
                         # Ищем ключевое слово
                         if self.keyword in name or self.keyword in description:
                             if vacancy["salary"] is None:
-                                ready_vacancy = Vacancy(vacancy["name"], vacancy["url"])
+                                ready_vacancy = Vacancy(vacancy["id"], vacancy["name"], vacancy["url"])
                             else:
-                                ready_vacancy = Vacancy(vacancy["name"], vacancy["url"], vacancy["salary"]["from"],
+                                ready_vacancy = Vacancy(vacancy["id"], vacancy["name"], vacancy["url"], vacancy["salary"]["from"],
                                                         vacancy["salary"]["to"], vacancy["salary"]["currency"])
                             page_vacancies.append(ready_vacancy)
+                            self.json_saver.add_vacancy(ready_vacancy)
 
             except ParsingError as error:
                 print(error)
@@ -129,6 +138,10 @@ class SuperJob(Server):
         """Метод осуществляет выборку вакансий"""
 
         self.vacancies = []
+
+        # Очищаем json файл
+        self.json_saver.clear_file()
+
         for page in range(page_count):
             page_vacancies = []
             self.params["page"] = page
@@ -140,11 +153,12 @@ class SuperJob(Server):
             else:
                 for vacancy in page_vacancies:
                     if vacancy["payment_from"] == 0 and vacancy["payment_to"] == 0:
-                        ready_vacancy = Vacancy(vacancy["profession"], vacancy["link"])
+                        ready_vacancy = Vacancy(vacancy["id"], vacancy["profession"], vacancy["link"])
                     else:
-                        ready_vacancy = Vacancy(vacancy["profession"], vacancy["link"], vacancy["payment_from"],
+                        ready_vacancy = Vacancy(vacancy["id"], vacancy["profession"], vacancy["link"], vacancy["payment_from"],
                                                 vacancy["payment_to"], vacancy["currency"])
                     self.vacancies.append(ready_vacancy)
+                    self.json_saver.add_vacancy(ready_vacancy)
                     print(f"Добавлена вакансия: {vacancy['profession']}")
             if len(page_vacancies) == 0:
                 print(f"Всего найдено вакансий: {len(self.vacancies)}")
