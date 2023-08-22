@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
 from exceptions import ParsingError
-from utils import exchange
+from work_with_vacancies import Vacancy
+from work_with_json import JSONSaver
 import requests
 
 
 class Server(ABC):
     """Абстрактный класс для работы с API сайтов с вакансиями"""
+
+    json_saver = JSONSaver()
 
     @abstractmethod
     def get_request(self):
@@ -52,6 +55,11 @@ class HeadHunter(Server):
         symbols = ".,()\'\":!;?-"
         self.vacancies = []
         self.params["pages"] = page_count
+
+        # Очищаем json файл
+        self.json_saver.clear_file()
+
+        # Начинаем перебор вакансий по страницам
         for page in range(page_count):
             page_vacancies = []
             temp_vacancies = []
@@ -62,7 +70,7 @@ class HeadHunter(Server):
                 for vacancy in temp_vacancies:
 
                     # Проверяем, что вакансия не в архиве
-                    if vacancy["archived"] == False:
+                    if not vacancy["archived"]:
 
                         # Удаляем ненужные символы из названия вакансии
                         name = vacancy["name"].lower()
@@ -80,11 +88,12 @@ class HeadHunter(Server):
                         # Ищем ключевое слово
                         if self.keyword in name or self.keyword in description:
                             if vacancy["salary"] is None:
-                                ready_vacancy = Vacancy(vacancy["name"], vacancy["url"])
+                                ready_vacancy = Vacancy(vacancy["id"], vacancy["name"], vacancy["url"])
                             else:
-                                ready_vacancy = Vacancy(vacancy["name"], vacancy["url"], vacancy["salary"]["from"],
+                                ready_vacancy = Vacancy(vacancy["id"], vacancy["name"], vacancy["url"], vacancy["salary"]["from"],
                                                         vacancy["salary"]["to"], vacancy["salary"]["currency"])
                             page_vacancies.append(ready_vacancy)
+                            self.json_saver.add_vacancy(ready_vacancy)
 
             except ParsingError as error:
                 print(error)
@@ -129,6 +138,10 @@ class SuperJob(Server):
         """Метод осуществляет выборку вакансий"""
 
         self.vacancies = []
+
+        # Очищаем json файл
+        self.json_saver.clear_file()
+
         for page in range(page_count):
             page_vacancies = []
             self.params["page"] = page
@@ -140,172 +153,14 @@ class SuperJob(Server):
             else:
                 for vacancy in page_vacancies:
                     if vacancy["payment_from"] == 0 and vacancy["payment_to"] == 0:
-                        ready_vacancy = Vacancy(vacancy["profession"], vacancy["link"])
+                        ready_vacancy = Vacancy(vacancy["id"], vacancy["profession"], vacancy["link"])
                     else:
-                        ready_vacancy = Vacancy(vacancy["profession"], vacancy["link"], vacancy["payment_from"],
+                        ready_vacancy = Vacancy(vacancy["id"], vacancy["profession"], vacancy["link"], vacancy["payment_from"],
                                                 vacancy["payment_to"], vacancy["currency"])
                     self.vacancies.append(ready_vacancy)
+                    self.json_saver.add_vacancy(ready_vacancy)
                     print(f"Добавлена вакансия: {vacancy['profession']}")
             if len(page_vacancies) == 0:
                 print(f"Всего найдено вакансий: {len(self.vacancies)}")
                 break
         print(f"Всего найдено вакансий: {len(self.vacancies)}")
-
-
-class Vacancy:
-    """Класс для работы с вакансиями"""
-
-    def __init__(self, name: str, link: str, salary_from=None, salary_to=None, currency=None):
-        """Конструктор класса"""
-
-        self.name = name
-        self.link = link
-        if salary_from and currency.upper() != "RUB" and currency.upper() != "RUR":
-            self.salary_from = exchange(currency, salary_from)
-        else:
-            self.salary_from = salary_from
-        if salary_to and currency.upper() != "RUB" and currency.upper() != "RUR":
-            self.salary_to = exchange(currency, salary_to)
-        else:
-            self.salary_to = salary_to
-        self.currency = "RUB"
-
-    def __str__(self):
-        """Вывод информации в пользовательском режиме"""
-
-        if self.salary_from is None and self.salary_to is None:
-            return f"\nНазвание вакансии: {self.name}\nСсылка: {self.link}"
-        else:
-            return (f"\nНазвание вакансии: {self.name}\nСсылка: {self.link}\nЗарплата"
-                    f"\nот: {self.salary_from}\nдо: {self.salary_to}\nВалюта: {self.currency}")
-
-    def __eq__(self, other):
-        """Оператор сравнения == """
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if self.salary_to:
-            first_salary = self.salary_to
-        elif self.salary_from:
-            first_salary = self.salary_from
-        else:
-            first_salary = 0
-
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if other.salary_to:
-            second_salary = other.salary_to
-        elif other.salary_from:
-            second_salary = other.salary_from
-        else:
-            second_salary = 0
-
-        if first_salary == second_salary:
-            return True
-        return False
-
-    def __ne__(self, other):
-        """Оператор сравнения != """
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if self.salary_to:
-            first_salary = self.salary_to
-        elif self.salary_from:
-            first_salary = self.salary_from
-        else:
-            first_salary = 0
-
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if other.salary_to:
-            second_salary = other.salary_to
-        elif other.salary_from:
-            second_salary = other.salary_from
-        else:
-            second_salary = 0
-
-        if first_salary != second_salary:
-            return True
-        return False
-
-    def __lt__(self, other):
-        """Оператор сравнения < """
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if self.salary_to:
-            first_salary = self.salary_to
-        elif self.salary_from:
-            first_salary = self.salary_from
-        else:
-            first_salary = 0
-
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if other.salary_to:
-            second_salary = other.salary_to
-        elif other.salary_from:
-            second_salary = other.salary_from
-        else:
-            second_salary = 0
-
-        if first_salary < second_salary:
-            return True
-        return False
-
-    def __le__(self, other):
-        """Оператор сравнения <= """
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if self.salary_to:
-            first_salary = self.salary_to
-        elif self.salary_from:
-            first_salary = self.salary_from
-        else:
-            first_salary = 0
-
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if other.salary_to:
-            second_salary = other.salary_to
-        elif other.salary_from:
-            second_salary = other.salary_from
-        else:
-            second_salary = 0
-
-        if first_salary <= second_salary:
-            return True
-        return False
-
-    def __gt__(self, other):
-        """Оператор сравнения > """
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if self.salary_to:
-            first_salary = self.salary_to
-        elif self.salary_from:
-            first_salary = self.salary_from
-        else:
-            first_salary = 0
-
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if other.salary_to:
-            second_salary = other.salary_to
-        elif other.salary_from:
-            second_salary = other.salary_from
-        else:
-            second_salary = 0
-
-        if first_salary > second_salary:
-            return True
-        return False
-
-    def __ge__(self, other):
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if self.salary_to:
-            first_salary = self.salary_to
-        elif self.salary_from:
-            first_salary = self.salary_from
-        else:
-            first_salary = 0
-
-        # Устанавливаем зарплату. Выбираем либо верхний, либо нижний порог
-        if other.salary_to:
-            second_salary = other.salary_to
-        elif other.salary_from:
-            second_salary = other.salary_from
-        else:
-            second_salary = 0
-
-        if first_salary >= second_salary:
-            return True
-        return False
