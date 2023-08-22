@@ -162,16 +162,13 @@ class Vacancy:
         self.link = link
         if salary_from and currency.upper() != "RUB" and currency.upper() != "RUR":
             self.salary_from = exchange(currency, salary_from)
-            self.currency = "RUB"
         else:
             self.salary_from = salary_from
-            self.currency = currency
         if salary_to and currency.upper() != "RUB" and currency.upper() != "RUR":
             self.salary_to = exchange(currency, salary_to)
-            self.currency = "RUB"
         else:
             self.salary_to = salary_to
-            self.currency = currency
+        self.currency = "RUB"
 
     def __str__(self):
         """Вывод информации в пользовательском режиме"""
@@ -312,9 +309,3 @@ class Vacancy:
         if first_salary >= second_salary:
             return True
         return False
-
-
-hh = HeadHunter("python")
-hh.get_vacancies()
-for v in hh.vacancies:
-    print(v)
