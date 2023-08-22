@@ -91,6 +91,55 @@ class HeadHunter(Server):
         print(f"Всего найдено вакансий: {len(self.vacancies)}")
 
 
-hh_api = HeadHunter("диспетчер")
-hh_api.get_vacancies()
-print(hh_api.vacancies)
+class SuperJob(Server):
+    """Класс для работы с платформой SuperJob"""
+
+    url = "https://api.superjob.ru/2.0/vacancies/"
+
+    def __init__(self, keyword: str):
+        """Конструктор класса"""
+
+        self.params = {
+            "count": 100,
+            "page": None,
+            "keyword": keyword,
+            "archive": False
+        }
+        self.vacancies = []
+        self.headers = {
+            "X-Api-App-Id": "v3.r.137735273.3c1eb613781d2ccaac4b807f884716c3b44541cf.344b00866b94b08ff81bf8f81eb5422c3e181334"
+        }
+
+    def get_request(self):
+        """Метод осуществляет запрос к сайту"""
+
+        response = requests.get(self.url, headers=self.headers, params=self.params)
+        if response.status_code != 200:
+            raise ParsingError(f"Ошибка получения вакансий. Статус: {response.status_code}")
+        return response.json()["objects"]
+
+    def get_vacancies(self, page_count=10):
+        """Метод осуществляет выборку вакансий"""
+
+        self.vacancies = []
+        for page in range(page_count):
+            page_vacancies = []
+            self.params["page"] = page
+
+            try:
+                page_vacancies = self.get_request()
+            except ParsingError as error:
+                print(error)
+            else:
+                self.vacancies.extend(page_vacancies)
+                for vacancy in page_vacancies:
+                    print(f"Добавлена вакансия: {vacancy['name']}")
+            if len(page_vacancies) == 0:
+                print(f"Всего найдено вакансий: {len(self.vacancies)}")
+                break
+        print(f"Всего найдено вакансий: {len(self.vacancies)}")
+
+
+sj_api = SuperJob("python")
+sj_api.get_vacancies()
+print(sj_api.vacancies)
