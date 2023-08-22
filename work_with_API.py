@@ -152,3 +152,40 @@ class Vacancy:
         self.salary = salary
         self.description = description
         self.area = area
+
+    def __eq__(self, other):
+        """Оператор сравнения == """
+        if self.salary == other.salary:
+            return True
+        return False
+
+    def __ne__(self, other):
+        """Оператор сравнения != """
+        if self.salary != other.salary:
+            return True
+        return False
+
+    def __lt__(self, other):
+        """Оператор сравнения < """
+        if self.salary < other.salary:
+            return True
+        return False
+
+    def __le__(self, other):
+        """Оператор сравнения <= """
+        if self.salary <= other.salary:
+            return True
+        return False
+
+    def __gt__(self, other):
+        """Оператор сравнения > """
+        if self.salary > other.salary:
+            return True
+        return False
+
+    def __ge__(self, other):
+        """Оператор сравнения >= """
+        if self.salary >= other.salary:
+            return True
+        return False
+
