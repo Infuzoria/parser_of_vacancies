@@ -23,6 +23,10 @@ class Saver(ABC):
     def delete_vacancy(self, vacancy: Vacancy):
         pass
 
+    @abstractmethod
+    def show_file(self):
+        pass
+
 
 class JSONSaver:
     """Класс для сохранения данных в формате json"""
@@ -85,9 +89,28 @@ class JSONSaver:
             data_list = []
 
             # Удаляем вакансию
+            count_vacancies = 0
             for row in temp_list:
                 if row["number"] != number:
+                    count_vacancies += 1
                     data_list.append(row)
+
+            if count_vacancies == len(temp_list):
+                print("Такой вакансии нет в файле. Скорее всего, вы уже удалили её.")
 
             with open("vacancies.json", "w", encoding="utf-8") as json_file:
                 json.dump(data_list, json_file, ensure_ascii=False)
+
+    @staticmethod
+    def show_file():
+        """Вывод на экран содержимого файла"""
+        if os.stat("vacancies.json").st_size == 0:
+            print("Файл пустой")
+        else:
+            with open("vacancies.json", encoding="utf-8") as json_file:
+                data_list = json.load(json_file)
+
+            for row in data_list:
+                vacancy = Vacancy(row["number"], row["profession"], row["link"], row["salary_from"],
+                                  row["salary_to"], row["currency"])
+                print(vacancy)
